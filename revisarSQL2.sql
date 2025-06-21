@@ -1,0 +1,209 @@
+USE[GD2015C1]
+GO
+
+-- Ejercicio 1
+select clie_codigo, clie_razon_social
+from Cliente
+where clie_limite_credito >= 1000
+order by clie_codigo
+
+-- Ejercicio 2 
+select prod_codigo, prod_detalle
+from Producto
+join Item_Factura on prod_codigo = item_producto
+join Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+where year(fact_fecha) = 2012
+group by prod_codigo, prod_detalle
+order by sum(item_cantidad) desc
+
+-- Ejercicio 3
+select prod_codigo, prod_detalle, sum(stoc_producto)
+from Producto
+left join STOCK on prod_codigo = stoc_producto
+group by prod_codigo, prod_detalle
+order by prod_detalle
+
+-- Ejercicio 4
+select prod_codigo, prod_detalle, count(*)
+from Producto
+join Composicion on prod_codigo = comp_producto
+group by prod_codigo, prod_detalle
+having prod_codigo in (select stoc_producto from STOCK where stoc_producto = prod_codigo group by stoc_producto having avg(stoc_cantidad) > 100)
+
+-- Ejecicio 5
+select prod_codigo, prod_detalle, sum(isnull(item_cantidad,0))
+from Producto
+join Item_Factura on prod_codigo = item_producto
+join Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+where year(fact_fecha) = 2012
+group by prod_codigo, prod_detalle
+having sum(item_cantidad) > (select sum(item_cantidad) from Item_Factura 
+                             join Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+                             where year(fact_fecha) = 2011 and prod_codigo = item_producto
+                             group by item_producto)
+
+-- Ejercicio 6
+select rubr_id, rubr_detalle, count(distinct prod_codigo), sum(isnull(stoc_cantidad,0))
+from Rubro
+left join Producto on rubr_id = prod_rubro and prod_codigo in (select stoc_producto from STOCK
+                                                               group by stoc_producto 
+                                                               having sum(isnull(stoc_cantidad,0)) > (select stoc_cantidad from STOCK where stoc_producto = '00000000' and stoc_deposito = '00'))
+left join STOCK on prod_codigo = stoc_producto
+group by rubr_id, rubr_detalle
+order by rubr_id
+
+-- Ejercicio 7
+select prod_codigo, prod_detalle, max(item_precio) as precio_maximo, min(item_precio) as precio_minimo, ((max(item_precio) - min(item_precio))/min(item_precio)*100) as diferencia
+from Producto
+join Item_Factura on prod_codigo = item_producto
+where prod_codigo in (select stoc_producto from STOCK group by stoc_producto having sum(isnull(stoc_cantidad,0)) > 0)
+group by prod_codigo, prod_detalle
+
+-- Ejercicio 8
+select prod_detalle, max(stoc_cantidad)
+from Producto
+join STOCK on prod_codigo = stoc_producto
+group by prod_detalle
+having count(*) = (select count(*) from DEPOSITO)
+
+-- Ejercicio 9
+select empl_jefe, empl_codigo, RTRIM(empl_apellido)+', '+RTRIM(empl_nombre) as nombre, count(*)
+from Empleado
+join DEPOSITO on empl_codigo = depo_encargado or empl_jefe = depo_encargado
+group by empl_jefe, empl_codigo, RTRIM(empl_apellido)+', '+RTRIM(empl_nombre)
+
+-- Ejercicio 10
+select prod_codigo, (select top 1 fact_cliente from Item_Factura 
+                       join Factura on fact_tipo+fact_sucursal+fact_numero=item_tipo+item_sucursal+item_numero
+                       where item_producto = prod_codigo
+                       group by fact_cliente
+                       order by sum(isnull(item_cantidad,0)))
+from Producto
+where prod_codigo in ((select top 10 item_producto from Item_Factura group by item_producto order by sum(isnull(item_cantidad,0)))) or
+      prod_codigo in (select top 10 item_producto from Item_Factura group by item_producto order by sum(isnull(item_cantidad,0)) desc)
+group by prod_codigo
+
+-- Ejercicio 11
+select fami_detalle, count(distinct prod_codigo) as productos_diferentes, sum(item_precio * item_cantidad)
+from Familia
+join Producto on prod_familia = fami_id
+join Item_Factura on prod_codigo = item_producto
+where fami_id in (select prod_familia from Producto 
+                       join Item_Factura on prod_codigo = item_producto
+                       join Factura on fact_tipo+fact_sucursal+fact_numero=item_tipo+item_sucursal+item_numero
+                       where year(fact_fecha) = 2012
+                       group by prod_familia
+                       having sum(item_precio * item_cantidad) > 20000)
+group by fami_detalle
+order by productos_diferentes desc
+
+-- Ejercicio 12
+select prod_detalle, count(distinct fact_cliente) as clientes_distintos, avg(item_precio) as importe_promedio,
+       (select count(*) from STOCK where prod_codigo = stoc_producto and stoc_deposito > 0 group by stoc_producto) as cantidad_depositos,
+       (select sum(isnull(stoc_cantidad,0)) from STOCK where prod_codigo = stoc_producto group by stoc_producto) as stock_total
+from Producto
+join Item_Factura on prod_codigo = item_producto
+join Factura on fact_tipo+fact_sucursal+fact_numero=item_tipo+item_sucursal+item_numero and year(fact_fecha) = 2012
+group by prod_codigo, prod_detalle
+order by sum(item_precio) desc
+
+-- Ejercicio 13
+select p.prod_detalle, p.prod_precio, sum(pc.prod_precio * comp_cantidad)
+from Producto p
+join Composicion on prod_codigo = comp_producto
+join Producto pc on comp_componente = pc.prod_codigo
+group by p.prod_detalle, p.prod_precio
+having sum(comp_cantidad) >= 2
+order by sum(comp_cantidad) desc
+
+-- Ejercicio 14
+select clie_codigo,
+       count(fact_numero+fact_sucursal+fact_tipo) as cantidad_compras,
+       avg(isnull(fact_total,0)),
+       (select count(distinct item_producto) from Item_Factura join Factura ff on ff.fact_numero+ff.fact_sucursal+ff.fact_tipo=item_numero+item_sucursal+item_tipo 
+            where clie_codigo = ff.fact_cliente and year(fact_fecha) = (select max(year(fact_fecha)) from Factura)),
+       max(isnull(fact_total,0)) as mayor_compra
+from Cliente 
+left join Factura fc on fc.fact_cliente = clie_codigo and year(fc.fact_fecha) = (select max(year(fact_fecha)) from Factura)
+group by clie_codigo, fc.fact_cliente
+order by cantidad_compras desc
+
+-- Ejercicio 15
+select p1.prod_codigo, p1.prod_detalle, p2.prod_codigo, p2.prod_detalle
+from Producto p1
+join Item_Factura if1 on p1.prod_codigo = if1.item_producto
+join Item_Factura if2 on if1.item_tipo+if1.item_sucursal+if1.item_numero = if2.item_tipo+if2.item_sucursal+if2.item_numero
+join Producto p2 on if2.item_producto = p2.prod_codigo
+where if1.item_cantidad + if2.item_cantidad > 500 and p1.prod_codigo < p2.prod_codigo
+order by if1.item_cantidad + if2.item_cantidad desc 
+
+-- Ejercicio 16
+select clie_razon_social, 
+       sum(item_cantidad),
+       (
+        select top 1 item_producto
+        from Item_Factura 
+        join Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+        where year(fact_fecha) = 2012 and clie_codigo = fact_cliente
+        group by item_producto
+        order by sum(item_cantidad) desc, item_producto asc
+        )
+from Cliente
+join Factura on clie_codigo = fact_cliente
+join Item_Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+where year(fact_fecha) = 2012
+group by clie_codigo, clie_razon_social
+having sum(item_cantidad) < (select top 1 avg(item_cantidad) / 3
+                          from Item_Factura
+                          join Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero and year(fact_fecha) = 2012
+                          where clie_codigo = fact_cliente
+                          group by item_producto
+                          order by sum(item_cantidad) desc)
+
+-- Ejercicio 17
+select ISNULL(FORMAT(f.fact_fecha, 'yyyyMM'),0),
+       prod_codigo,
+       prod_detalle,
+       sum(isnull(item_cantidad,0)) as cantidad_vendida,
+       ISNULL((
+        select sum(isnull(item_cantidad,0)) from Item_Factura join Factura f2 on f2.fact_tipo+f2.fact_sucursal+f2.fact_numero = item_tipo+item_sucursal+item_numero
+        where month(f2.fact_fecha) = month(f.fact_fecha) and year(f2.fact_fecha) = year(f.fact_fecha) - 1 and item_producto = prod_codigo
+        group by item_producto
+       ),0) as ventas_año_anterior,
+       count(distinct fact_tipo+fact_numero+fact_sucursal) as cantidad_facturas
+from Producto
+join Item_Factura on prod_codigo = item_producto
+join Factura f on f.fact_tipo+f.fact_sucursal+f.fact_numero = item_tipo+item_sucursal+item_numero
+group by FORMAT(f.fact_fecha, 'yyyyMM'), year(f.fact_fecha), month(f.fact_fecha), prod_codigo, prod_detalle
+order by FORMAT(f.fact_fecha, 'yyyyMM'), prod_codigo
+
+-- Ejercicio 18
+select rubr_detalle,
+       sum(isnull(item_precio * item_cantidad,0)) as ventas,
+       ISNULL((
+        select top 1 item_producto from Producto join Item_Factura on prod_codigo = item_producto
+        where prod_rubro = rubr_id
+        group by item_producto
+        order by sum(item_cantidad) desc
+       ),0) as producto_mas_vendido,
+       ISNULL((
+        select top 1 item_producto from Producto join Item_Factura on prod_codigo = item_producto
+        where prod_rubro = rubr_id and prod_codigo not in (select top 1 item_producto from Producto join Item_Factura on prod_codigo = item_producto
+                                                           where prod_rubro = rubr_id
+                                                           group by item_producto
+                                                           order by sum(item_cantidad) desc)
+        group by item_producto
+        order by sum(item_cantidad) desc
+       ),0) as segundo_producto_mas_vendido,
+       ISNULL((
+        select top 1 fact_cliente from Factura
+        join Item_Factura on fact_tipo+fact_sucursal+fact_numero=item_tipo+item_sucursal+item_numero join Producto on prod_codigo = item_producto
+        where prod_rubro = rubr_id and fact_fecha >= DATEADD(DAY,-30,GETDATE())
+        group by fact_cliente
+        order by sum(item_cantidad) desc        
+       ),0)
+from Rubro
+left join Producto on prod_rubro = rubr_id
+left join Item_Factura on prod_codigo = item_producto
+group by rubr_id, rubr_detalle
+order by count(distinct item_producto) desc
