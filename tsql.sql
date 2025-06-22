@@ -110,3 +110,24 @@ BEGIN
 	END
 END
 GO
+
+-- Ejercicio 11
+CREATE FUNCTION ejercicio11 (@jefe numeric(6,0))
+RETURNS INT
+AS
+BEGIN
+	DECLARE @cantidad INT, @empleado numeric(6,0)
+	DECLARE c1 CURSOR FOR (select empl_codigo from Empleado where empl_jefe = @jefe and empl_codigo > empl_jefe)
+	SET @cantidad = 0	
+	OPEN c1
+	FETCH NEXT FROM c1 INTO @empleado
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		SET @cantidad = @cantidad + 1 + dbo.ejercicio11(@empleado)
+		FETCH NEXT FROM c1 INTO @empleado
+	END
+	CLOSE c1
+	DEALLOCATE c1
+	RETURN @cantidad
+END
+GO
