@@ -98,3 +98,15 @@ BEGIN
 	DEALLOCATE c1 
 END
 GO
+
+-- Ejercicio 10
+CREATE TRIGGER ejercicio10 ON Producto AFTER delete
+AS
+BEGIN
+	IF (select count(*) from deleted join STOCK on deleted.prod_codigo = stoc_producto where stoc_cantidad > 0) > 0
+	BEGIN
+		ROLLBACK
+		PRINT 'NO SE PUEDEN ELIMINAR PRODUCTOS CON STOCK!'
+	END
+END
+GO
