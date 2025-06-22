@@ -161,7 +161,7 @@ BEGIN
 			FETCH NEXT FROM cc INTO @prod_componente
 			WHILE @@FETCH_STATUS = 0 and @ret = 0
 				BEGIN
-					SET @ret = dbo.ejercicio12(@producto, @prod_componente)
+					SET @ret = dbo.f_ejercicio12(@producto, @prod_componente)
 					FETCH NEXT FROM cc INTO @prod_componente
 				END
 			CLOSE cc
