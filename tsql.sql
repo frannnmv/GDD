@@ -9,7 +9,7 @@ Ejercicio 1
 	“DEPOSITO COMPLETO”.
 */
 
-CREATE FUNCTION ejercicio1 (@articulo char(8), @deposito char(2))
+ALTER FUNCTION ejercicio1 (@articulo char(8), @deposito char(2))
 RETURNS varchar(50)
 AS
 BEGIN
@@ -19,10 +19,9 @@ BEGIN
 		where stoc_producto = @articulo and stoc_deposito = @deposito
 	)
 	IF @stock >= @stock_limite or @stock_limite = 0
-		RETURN PRINT('DEPOSITO COMPLETO')
-	RETURN PRINT('OCUPACION DEL DEPOSITO '+ @deposito+': ' + (@stock/@stock_limite)*100+'%')
+	BEGIN
+		RETURN 'DEPOSITO COMPLETO'
+	END
+	RETURN 'OCUPACION DEL DEPOSITO '+ @deposito+': ' + str((@stock/@stock_limite)*100)+'%'
 END
 GO
-
-select *, dbo.ejercicio1(stoc_producto, stoc_deposito)
-from stock
