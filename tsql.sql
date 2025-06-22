@@ -170,3 +170,40 @@ BEGIN
 	RETURN @ret
 END
 GO
+
+-- Ejercicio 13
+CREATE TRIGGER ejercicio13 ON Empleado AFTER update, delete
+AS
+BEGIN
+	IF (select count(*) from inserted where (select empl_salario from Empleado where empl_codigo = inserted.empl_jefe) > dbo.f_ejercicio13(inserted.empl_codigo) * 0.2) > 0
+		BEGIN
+			ROLLBACK
+			RAISERROR('NINGUN JEFE PUEDE TENER UN SALARIO MAYOR AL 20% DE LA SUMA DE LOS SALARIOS DE SUS EMPLEADOS!',16,1)
+		END
+	IF (select count(*) from deleted where (select empl_salario from Empleado where empl_codigo = deleted.empl_jefe) > dbo.f_ejercicio13(inserted.empl_codigo) * 0.2) > 0
+		BEGIN
+			ROLLBACK
+			RAISERROR('NINGUN JEFE PUEDE TENER UN SALARIO MAYOR AL 20% DE LA SUMA DE LOS SALARIOS DE SUS EMPLEADOS!',16,1)
+		END
+END
+GO
+
+ALTER FUNCTION f_ejercicio13(@jefe numeric(6,0))
+RETURNS decimal(12,2)
+AS
+BEGIN
+	DECLARE @total decimal(12,2), @empleado numeric(6,0)
+	DECLARE ce CURSOR FOR (select empl_codigo from Empleado where empl_jefe = @jefe)
+	SET @total = 0
+	OPEN ce
+	FETCH NEXT FROM ce INTO @empleado
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+			SET @total = @total + (select empl_salario from Empleado where empl_codigo = @empleado) + dbo.f_ejercicio13(@empleado)
+			FETCH NEXT FROM ce INTO @empleado
+		END
+	CLOSE ce
+	DEALLOCATE ce
+	RETURN @total
+END
+GO
