@@ -70,3 +70,31 @@ BEGIN
 	SELECT top 1 @gerente_general = empl_codigo from Empleado where empl_jefe is null order by empl_salario desc, empl_ingreso
 	UPDATE Empleado set empl_jefe = @gerente_general where empl_jefe is null and empl_jefe <> @gerente_general
 END
+GO
+
+-- Ejercicio 4
+CREATE PROCEDURE ejercicio4 @empleado_mas_vendio numeric(6,0) output
+AS
+BEGIN
+	DECLARE @empleado numeric(6,0), @monto decimal(12,2), @monto_max decimal(12,2) = -1
+	DECLARE c1 CURSOR FOR (select empl_codigo from Empleado)
+	OPEN c1
+	FETCH NEXT FROM c1 INTO @empleado
+	WHILE @@FETCH_STATUS = 0
+	BEGIN
+		select @monto = sum(isnull(fact_total,0)) from Factura
+		where year(fact_fecha) = (select max(year(fact_fecha)) from Factura) and fact_vendedor = @empleado
+		group by fact_vendedor
+
+		UPDATE Empleado set empl_comision = @monto where empl_codigo = @empleado
+		IF @monto_max = -1 or @monto > @monto_max
+		BEGIN
+			SET @empleado_mas_vendio = @empleado
+			SET @monto_max = @monto
+		END
+		FETCH NEXT FROM c1 INTO @empleado
+	END
+	CLOSE c1
+	DEALLOCATE c1 
+END
+GO
