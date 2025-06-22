@@ -131,3 +131,42 @@ BEGIN
 	RETURN @cantidad
 END
 GO
+
+-- Ejercicio 12
+CREATE TRIGGER ejercicio12 ON Composicion AFTER insert, update
+AS
+BEGIN
+	IF (select count(*) from inserted where dbo.f_ejercicio12(comp_producto,comp_componente) = 1) > 0
+	BEGIN
+		ROLLBACK
+		RAISERROR('UN PRODUCTO NO SE PUEDE COMPONER A SI MISMO',16,1)
+	END
+END
+GO
+
+CREATE FUNCTION f_ejercicio12(@producto char(8), @componente char(8))
+RETURNS INT
+AS
+BEGIN
+	DECLARE @prod_componente char(8), @ret INT = 0
+	IF @producto = @componente
+		BEGIN	
+			SET @ret = 1
+			RETURN @ret
+		END
+	ELSE
+		BEGIN
+			DECLARE cc CURSOR FOR (select comp_componente from Composicion where @producto = comp_producto)
+			OPEN cc
+			FETCH NEXT FROM cc INTO @prod_componente
+			WHILE @@FETCH_STATUS = 0 and @ret = 0
+				BEGIN
+					SET @ret = dbo.ejercicio12(@producto, @prod_componente)
+					FETCH NEXT FROM cc INTO @prod_componente
+				END
+			CLOSE cc
+			DEALLOCATE cc
+		END
+	RETURN @ret
+END
+GO
