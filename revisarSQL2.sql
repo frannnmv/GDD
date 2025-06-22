@@ -207,3 +207,10 @@ left join Producto on prod_rubro = rubr_id
 left join Item_Factura on prod_codigo = item_producto
 group by rubr_id, rubr_detalle
 order by count(distinct item_producto) desc
+
+-- Ejercicio 21
+select year(fact_fecha), count(distinct fact_cliente), count(distinct fact_tipo+fact_sucursal+fact_numero)
+from Factura
+where ABS((fact_total-fact_total_impuestos) - (select sum(item_precio * item_cantidad) from Item_Factura where fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero)) > 1
+group by year(fact_fecha)
+having count(distinct fact_tipo+fact_sucursal+fact_numero) > 0
