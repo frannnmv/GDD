@@ -353,3 +353,24 @@ where year(fact_fecha) = 2011 and p.prod_familia in (select prod_familia from Pr
                                                      having count(*) > 20 )
 group by p.prod_codigo, p.prod_detalle
 order by CANTIDAD_VENDIDA desc
+
+-- Ejercicio 30
+select
+    rtrim(jefe.empl_apellido)+', '+rtrim(jefe.empl_nombre) AS NOMBRE_JEFE,
+    count(distinct subordinado.empl_codigo) AS CANTIDAD_EMPLEADOS,
+    sum(fact_total) AS MONTO_TOTAL,
+    count(fact_tipo+fact_sucursal+fact_numero) AS CANTIDAD_FACTURAS,
+    (
+        select top 1 empl_codigo from Empleado
+        join Factura on empl_codigo = fact_vendedor and year(fact_fecha) = 2012
+        where empl_jefe = jefe.empl_codigo
+        group by empl_codigo
+        order by sum(fact_total) desc
+    ) AS EMPLEADO_CON_MEJOR_VENTAS
+from Empleado jefe
+join Empleado subordinado on subordinado.empl_jefe = jefe.empl_codigo
+join Factura on fact_vendedor = subordinado.empl_codigo
+where year(fact_fecha) = 2012
+group by jefe.empl_codigo, rtrim(jefe.empl_apellido)+', '+rtrim(jefe.empl_nombre)
+having count(fact_tipo+fact_sucursal+fact_numero) > 10
+order by MONTO_TOTAL desc
