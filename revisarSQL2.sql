@@ -283,3 +283,31 @@ where prod_familia in (select top 1 prod_familia from Producto
                                              group by prod_familia
                                              order by sum(item_cantidad) desc, prod_familia asc) 
 group by year(f.fact_fecha)
+
+-- Ejercicio 26
+
+select
+    f.fact_vendedor as EMPLEADO,
+    (select count(*) from DEPOSITO where depo_encargado = f.fact_vendedor) AS CANTIDAD_DEPOSITOS,
+    sum(fact_total) AS MONTO_TOTAL_FACTURADO_EN_EL_ANIO_CORRIENTE,
+    (
+        select top 1 fact_cliente from Factura
+        where fact_vendedor = f.fact_vendedor
+        group by fact_cliente
+        order by sum(fact_total) desc
+    ) AS CLIENTE_QUE_MAS_VENDIO,
+    (
+        select top 1 item_producto from Factura
+        join Item_Factura on item_tipo+item_sucursal+item_numero = fact_tipo+fact_sucursal+fact_numero
+        where fact_vendedor = f.fact_vendedor and year(fact_fecha) = (select max(year(fact_fecha)) from Factura)
+        group by item_producto
+        order by sum(item_cantidad) desc
+    ) AS PRODUCTO_QUE_MAS_VENDIO,
+    (
+        sum(fact_total) / (select sum(fact_total) from Factura where year(fact_fecha) = (select max(year(fact_fecha)) from Factura)) * 100
+    ) AS PORCENTAJE
+from Factura f
+join Empleado on empl_codigo = f.fact_vendedor
+where year(f.fact_fecha) = (select max(year(fact_fecha)) from Factura)
+group by f.fact_vendedor
+order by MONTO_TOTAL_FACTURADO_EN_EL_ANIO_CORRIENTE desc
