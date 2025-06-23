@@ -337,3 +337,19 @@ join Empleado on empl_codigo = f.fact_vendedor
 join Item_Factura on f.fact_tipo+f.fact_sucursal+f.fact_numero = item_tipo+item_sucursal+item_numero
 group by year(f.fact_fecha), f.fact_vendedor, rtrim(empl_nombre)+', '+rtrim(empl_apellido)
 order by year(f.fact_fecha), MONTO_TOTAL desc
+
+-- Ejercicio 29
+select 
+    p.prod_codigo AS CODIGO,
+    p.prod_detalle AS DETALLE,
+    sum(item_cantidad) AS CANTIDAD_VENDIDA,
+    count(distinct fact_tipo+fact_sucursal+fact_numero) AS CANTIDAD_FACTURAS,
+    sum(item_precio * item_cantidad) AS MONTO_TOTAL
+from Producto p
+join Item_Factura on item_producto = p.prod_codigo
+join Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+where year(fact_fecha) = 2011 and p.prod_familia in (select prod_familia from Producto 
+                                                     group by prod_familia
+                                                     having count(*) > 20 )
+group by p.prod_codigo, p.prod_detalle
+order by CANTIDAD_VENDIDA desc
