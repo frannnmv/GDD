@@ -214,3 +214,72 @@ from Factura
 where ABS((fact_total-fact_total_impuestos) - (select sum(item_precio * item_cantidad) from Item_Factura where fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero)) > 1
 group by year(fact_fecha)
 having count(distinct fact_tipo+fact_sucursal+fact_numero) > 0
+
+-- Ejercicio 25
+select
+    year(f.fact_fecha) AS ANIO,
+    (
+        select top 1 prod_familia from Producto 
+        join Item_Factura on item_producto = prod_codigo
+        join Factura f_fami on f_fami.fact_tipo+f_fami.fact_sucursal+f_fami.fact_numero = item_tipo+item_sucursal+item_numero
+            and year(f_fami.fact_fecha) = year(f.fact_fecha) 
+        group by prod_familia
+        order by sum(item_cantidad) desc, prod_familia asc
+    ) AS FAMILIA_MAS_VENDIO,
+    (
+        select count(distinct prod_rubro) from Producto
+        where prod_familia in (select top 1 prod_familia from Producto 
+                                             join Item_Factura on item_producto = prod_codigo
+                                             join Factura f_fami on f_fami.fact_tipo+f_fami.fact_sucursal+f_fami.fact_numero = item_tipo+item_sucursal+item_numero
+                                             and year(f_fami.fact_fecha) = year(f.fact_fecha) 
+                                             group by prod_familia
+                                             order by sum(item_cantidad) desc, prod_familia asc) 
+    ) AS CANTIDAD_RUBROS,
+    (
+        select count(*) from Composicion 
+        where comp_producto in (select top 1 prod_codigo from Producto
+                                join Item_Factura on item_producto = prod_codigo
+                                where prod_familia = (select top 1 prod_familia from Producto 
+                                                      join Item_Factura on item_producto = prod_codigo
+                                                      join Factura f_fami on f_fami.fact_tipo+f_fami.fact_sucursal+f_fami.fact_numero = item_tipo+item_sucursal+item_numero
+                                                      and year(f_fami.fact_fecha) = year(f.fact_fecha) 
+                                                      group by prod_familia
+                                                      order by sum(item_cantidad) desc, prod_familia asc)
+                                group by prod_codigo
+                                order by sum(item_cantidad) desc) 
+    ) AS CANTIDAD_COMPONENTES,
+    count(distinct fact_tipo+fact_sucursal+fact_numero) AS DISTINTAS_FACTURAS,
+    (
+        select top 1 fact_cliente from Factura
+        join Item_Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+        join Producto on prod_codigo = item_producto and prod_familia in (select top 1 prod_familia from Producto 
+                                                                          join Item_Factura on item_producto = prod_codigo
+                                                                          join Factura f_fami on f_fami.fact_tipo+f_fami.fact_sucursal+f_fami.fact_numero = item_tipo+item_sucursal+item_numero
+                                                                          and year(f_fami.fact_fecha) = year(f.fact_fecha) 
+                                                                          group by prod_familia
+                                                                          order by sum(item_cantidad) desc, prod_familia asc)
+        where year(fact_fecha) = year(f.fact_fecha)
+        group by fact_cliente
+        order by sum(item_cantidad) desc
+    ) AS CLIENTE_QUE_MAS_COMPRO,
+    (   
+        select sum(item_cantidad * item_precio) from Factura
+        join Item_Factura on fact_tipo+fact_sucursal+fact_numero = item_tipo+item_sucursal+item_numero
+        join Producto on prod_codigo = item_producto and prod_familia in (select top 1 prod_familia from Producto 
+                                                                          join Item_Factura on item_producto = prod_codigo
+                                                                          join Factura f_fami on f_fami.fact_tipo+f_fami.fact_sucursal+f_fami.fact_numero = item_tipo+item_sucursal+item_numero
+                                                                          and year(f_fami.fact_fecha) = year(f.fact_fecha)                                                                           
+                                                                          group by prod_familia
+                                                                          order by sum(item_cantidad) desc, prod_familia asc)
+        where year(fact_fecha) = year(f.fact_fecha)
+    )/sum(fact_total)*100 AS PORCENTAJE
+from Factura f
+join Item_Factura on f.fact_tipo+f.fact_sucursal+f.fact_numero = item_tipo+item_sucursal+item_numero
+join Producto on prod_codigo = item_producto
+where prod_familia in (select top 1 prod_familia from Producto 
+                                             join Item_Factura on item_producto = prod_codigo
+                                             join Factura f_fami on f_fami.fact_tipo+f_fami.fact_sucursal+f_fami.fact_numero = item_tipo+item_sucursal+item_numero
+                                             and year(f_fami.fact_fecha) = year(f.fact_fecha) 
+                                             group by prod_familia
+                                             order by sum(item_cantidad) desc, prod_familia asc) 
+group by year(f.fact_fecha)
