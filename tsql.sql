@@ -207,3 +207,31 @@ BEGIN
 	RETURN @total
 END
 GO
+
+-- Ejercicio 24
+CREATE PROCEDURE ejercicio24
+AS
+BEGIN
+	DECLARE @deposito char(2), @zona char(3)
+	DECLARE c_depositos CURSOR FOR( select depo_codigo, depo_zona from DEPOSITO
+							   join Empleado on depo_encargado = empl_codigo
+							   join Departamento on empl_departamento = depa_codigo
+							   where depa_zona <> depo_zona)
+	OPEN c_depositos
+	FETCH NEXT FROM c_depositos INTO @deposito, @zona
+	WHILE @@FETCH_STATUS = 0
+		BEGIN
+			UPDATE DEPOSITO
+			SET depo_encargado = (
+								   select top 1 empl_codigo from Empleado
+								   join Departamento on empl_departamento = depa_codigo
+								   where depa_zona = @zona
+								   order by (select count(*) from DEPOSITO where depo_encargado = empl_codigo)
+								  )
+			WHERE depo_codigo = @deposito
+			FETCH NEXT FROM c_depositos INTO @deposito, @zona
+		END
+	CLOSE c_depositos
+	DEALLOCATE c_depositos
+END
+GO
