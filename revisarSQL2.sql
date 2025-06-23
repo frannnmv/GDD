@@ -311,3 +311,29 @@ join Empleado on empl_codigo = f.fact_vendedor
 where year(f.fact_fecha) = (select max(year(fact_fecha)) from Factura)
 group by f.fact_vendedor
 order by MONTO_TOTAL_FACTURADO_EN_EL_ANIO_CORRIENTE desc
+
+-- Ejercicio 28
+select 
+    year(f.fact_fecha) AS ANIO,
+    f.fact_vendedor AS CODIGO_VENDEDOR,
+    rtrim(empl_nombre)+', '+rtrim(empl_apellido) AS DETALLE_VENDEDOR,
+    count(distinct f.fact_tipo+f.fact_sucursal+f.fact_numero) AS CANTIDAD_FACTURAS,
+    count(distinct f.fact_cliente) AS CANTIDAD_CLIENTES,
+    (
+         select count(distinct item_producto) from Factura
+         join Item_Factura on item_tipo+item_sucursal+item_numero = fact_tipo+fact_sucursal+fact_numero
+         and year(fact_fecha) = year(f.fact_fecha) and fact_vendedor = f.fact_vendedor
+         where item_producto in (select distinct comp_producto from Composicion)
+    ) AS PRODUCTOS_CON_COMPOSICION,
+    (
+         select count(distinct item_producto) from Factura
+         join Item_Factura on item_tipo+item_sucursal+item_numero = fact_tipo+fact_sucursal+fact_numero
+         and year(fact_fecha) = year(f.fact_fecha) and fact_vendedor = f.fact_vendedor
+         where item_producto not in (select distinct comp_producto from Composicion)    
+    ) AS PRODUCTOS_SIN_COMPOSICION,
+    sum(item_precio * item_cantidad) AS MONTO_TOTAL
+from Factura f
+join Empleado on empl_codigo = f.fact_vendedor
+join Item_Factura on f.fact_tipo+f.fact_sucursal+f.fact_numero = item_tipo+item_sucursal+item_numero
+group by year(f.fact_fecha), f.fact_vendedor, rtrim(empl_nombre)+', '+rtrim(empl_apellido)
+order by year(f.fact_fecha), MONTO_TOTAL desc
