@@ -376,7 +376,7 @@ having count(fact_tipo+fact_sucursal+fact_numero) > 10
 order by MONTO_TOTAL desc
 
 -- Ejercicio 32
-select top 100 
+select
     f1.fami_id, 
     f1.fami_detalle, 
     f2.fami_id, 
@@ -393,3 +393,23 @@ where f1.fami_id < f2.fami_id
 group by f1.fami_id, f1.fami_detalle, f2.fami_id, f2.fami_detalle
 having count(distinct if1.item_tipo+if1.item_sucursal+if1.item_numero) > 10
 order by TOTAL_VENDIDO desc
+
+-- Ejercicio 33
+select
+    comp_componente,
+    prod_detalle,
+    sum(isnull(item_cantidad,0)) AS CANTIDAD_VENDIDA,
+    count(distinct item_tipo+item_sucursal+item_numero) AS CANTIDAD_FACTURAS,
+    avg(isnull(item_precio,0)) AS PRECIO_PROMEDIO,
+    sum(isnull(item_precio * item_cantidad,0)) AS TOTAL
+from Composicion
+join Producto on comp_componente = prod_codigo
+join Item_Factura on prod_codigo = item_producto
+join Factura on item_tipo+item_sucursal+item_numero = fact_tipo+fact_sucursal+fact_numero 
+where year(fact_fecha) = 2012 and comp_producto = (select top 1 item_producto from Item_Factura
+                       join Factura on item_tipo+item_sucursal+item_numero = fact_tipo+fact_sucursal+fact_numero
+                       where year(fact_fecha) = 2012
+                       group by item_producto
+                       order by sum(item_cantidad) desc)
+group by comp_componente, prod_detalle
+order by CANTIDAD_VENDIDA desc
