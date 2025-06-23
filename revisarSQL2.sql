@@ -374,3 +374,22 @@ where year(fact_fecha) = 2012
 group by jefe.empl_codigo, rtrim(jefe.empl_apellido)+', '+rtrim(jefe.empl_nombre)
 having count(fact_tipo+fact_sucursal+fact_numero) > 10
 order by MONTO_TOTAL desc
+
+-- Ejercicio 32
+select top 100 
+    f1.fami_id, 
+    f1.fami_detalle, 
+    f2.fami_id, 
+    f2.fami_detalle,
+    count(distinct if1.item_tipo+if1.item_sucursal+if1.item_numero) AS CANTIDAD_FACTURAS,
+    sum((if1.item_precio * if1.item_cantidad) + (if2.item_precio * if2.item_cantidad)) AS TOTAL_VENDIDO
+from Familia f1
+join Producto p1 on f1.fami_id = p1.prod_familia 
+join Item_Factura if1 on p1.prod_codigo = if1.item_producto
+join Item_Factura if2 on if1.item_tipo+if1.item_sucursal+if1.item_numero = if2.item_tipo+if2.item_sucursal+if2.item_numero
+join Producto p2 on if2.item_producto = p2.prod_codigo
+join Familia f2 on p2.prod_familia = f2.fami_id
+where f1.fami_id < f2.fami_id
+group by f1.fami_id, f1.fami_detalle, f2.fami_id, f2.fami_detalle
+having count(distinct if1.item_tipo+if1.item_sucursal+if1.item_numero) > 10
+order by TOTAL_VENDIDO desc
